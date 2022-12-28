@@ -2,15 +2,22 @@ import Course from "../models/courseModel.js";
 import APIFeatures from "../utilz/apiFeatures.js";
 
 export const getCourses = async (req, res) => {
-  const features = new APIFeatures(Course.find(), req.query)
+  const features = new APIFeatures(
+    Course.find(),
+    Course.countDocuments(),
+    req.query
+  )
+    .sanitize()
     .search()
     .filter()
     .paginate();
   const courses = await features.query;
 
+  const totalCourses = await features.totalDocQuery;
   res.status(200).json({
     status: "sucess",
     data: {
+      totalCourses,
       courses,
     },
   });
