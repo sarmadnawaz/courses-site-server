@@ -43,6 +43,19 @@ const userSchema = new mongoose.Schema({
     type: String,
     select : false
   },
+  resetPasswordToken: {
+    type: String,
+    select: false,
+  },
+  resetPasswordTokenExpires: {
+    type: Date,
+    select : false
+  },
+  createdAt: {
+    type: Date,
+    default : Date.now,
+    select : false
+  }
 });
 
 // Comparing password and confirm password
@@ -71,6 +84,7 @@ userSchema.pre("save", function (next) {
 });
 
 //** METHODS **//
+
 userSchema.methods.verifyPassword = async function (password, hashedPassword) {
   return await bcrypt.compare(password, hashedPassword);
 };
@@ -84,5 +98,12 @@ userSchema.methods.createEmailVerificationToken = function (id) {
   this.emailVerificationTokenExpires = Date.now() + 10 * 60 * 1000;
   return verificationToken;
 };
+
+userSchema.methods.createResetPasswordToken = function () {
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  this.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+  this.resetPasswordTokenExpires = Date.now() + 10 * 60 * 1000;
+  return resetToken;
+}
 
 export default mongoose.model("User", userSchema);

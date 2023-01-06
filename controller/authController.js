@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/userModel.js";
 import sendEmailVerfication from "../utilz/sendEmailVerfication.js";
+import sendPasswordResetToken from "../utilz/sendResetPasswordToken.js";
 import catchAsync from "../utilz/catchAsync.js";
 import AppError from "../utilz/appError.js";
 
@@ -63,6 +64,8 @@ const verifyEmail = catchAsync(async (req, res, next) => {
   if (!user) return next(new AppError("Token has been expired", 403));
   //! Change verify field of user document to true and then save
   user.isVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationTokenExpires = undefined;
   user.save({ validateBeforeSave: false });
 
   res.status(200).json({
@@ -74,8 +77,28 @@ const verifyEmail = catchAsync(async (req, res, next) => {
   });
 });
 
+const forgotPassword = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) next(new AppError("Please provide us your email"));
+  const user = await User.findOne({ email });
+  if (!user) next(new AppError("User Not Found"));
+  const token = user.createResetPasswordToken();
+  await sendPasswordResetToken({
+    email: user.email,
+    token,
+    protocol: req.protocol,
+    host: req.get("host"),
+  });
+  user.save({ validateBeforeSave: false });
+  res.status(200).json({
+    status: "success",
+    message: `Reset Password Link has been send to ${user.email}.`,
+  });
+});
+
 export default {
   signup,
   signin,
   verifyEmail,
+  forgotPassword,
 };
