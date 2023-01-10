@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import crypto from 'crypto'
 import bcrypt from "bcrypt";
+import validator from "validator";
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -18,17 +19,19 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
-    validate: {
-      validator(value) {
-        return value.length >= 8;
-      },
-      message: "Password must be at least 8 character long",
-    },
-    select : false
+    required: [true, 'Please provide a password'],
+    select: false,
+    minlength : 8,
   },
   confirmPassword: {
     type: String,
+    required: [true, 'Please confirm your password'],
+    validate: {
+      validator(el) {
+        return el === this.password;
+      },
+      message: "Passwords are not matching with confirm password",
+    },
     required: true,
   },
   isVerified: {
@@ -55,30 +58,40 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default : Date.now,
     select : false
+  },
+  passwordUpdatedAt: {
+    type: Date,
+    select: false
+  },
+  isPasswordChanged: {
+    type: Boolean,
   }
 });
 
 // Comparing password and confirm password
-userSchema.pre("save", function (next) {
-  if (this.isNew) {
-    console.log(this.password, this.confirmPassword);
-    if (this.password !== this.confirmPassword)
-      return next(new Error("Confirm password is not matching with password"));
-    this.confirmPassword = undefined;
-  }
-  next();
-});
+// userSchema.pre("save", function (next) {
+//   if (this.isNew) {
+//     console.log(this.password, this.confirmPassword);
+//     if (this.password !== this.confirmPassword)
+//       return next(new Error("Confirm password is not matching with password"));
+//     this.confirmPassword = undefined;
+//   }
+//   next();
+// });
 
 // Hashing the password
 userSchema.pre("save", function (next) {
   const user = this;
-  if (this.isNew) {
+  if (this.isNew || this.isPasswordChanged) {
+    this.isPasswordChanged = undefined
     bcrypt.hash(user.password, 10, (err, hash) => {
       if (err) {
         return next(err);
       }
       user.password = hash;
     });
+    this.confirmPassword = undefined;
+
   }
   next();
 });
@@ -89,7 +102,7 @@ userSchema.methods.verifyPassword = async function (password, hashedPassword) {
   return await bcrypt.compare(password, hashedPassword);
 };
 
-userSchema.methods.createEmailVerificationToken = function (id) {
+userSchema.methods.createEmailVerificationToken = function () {
   const verificationToken = crypto.randomBytes(32).toString("hex");
   this.emailVerificationToken = crypto
     .createHash("sha256")

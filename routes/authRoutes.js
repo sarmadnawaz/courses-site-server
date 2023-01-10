@@ -6,6 +6,7 @@ router
 .post('/signup', authController.signup)
 .post('/signin', authController.signin)
 .post('/forgotpassword', authController.forgotPassword)
+.post('/resetpassword/:token', authController.resetpassword)
 .get('/emailverification/:token', authController.verifyEmail)
 
 export default router;

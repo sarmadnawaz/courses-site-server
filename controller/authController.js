@@ -11,7 +11,7 @@ const signup = catchAsync(async (req, res, next) => {
   req.body.isVerified = false;
   const user = await User.create(req.body);
   //! Email Verification
-  const verificationToken = user.createEmailVerificationToken(user._id);
+  const verificationToken = user.createEmailVerificationToken();
   await sendEmailVerfication({
     email: user.email,
     token: verificationToken,
@@ -35,7 +35,7 @@ const signin = catchAsync(async (req, res, next) => {
   // checking user and verifying password
   const user = await User.findOne({ email }).select("+password");
   if (!user || !(await user.verifyPassword(password, user.password))) {
-    return next("Incorrect email or password");
+    return next(new AppError("invalid email or password", 401));
   }
   if (!user.isVerified) {
     return next(new AppError("Email is not verified", 401));
@@ -96,9 +96,33 @@ const forgotPassword = catchAsync(async (req, res, next) => {
   });
 });
 
+const resetpassword = catchAsync(async (req, res, next) => {
+  const hashedToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordTokenExpires: { $gt: Date.now() }
+  })
+  if (!user) return next(new AppError('Invalid token or token is expired', 400))
+  const { password, confirmPassword } = req.body;
+  user.password = password;
+  user.confirmPassword = confirmPassword;
+  user.isVerified = true;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordTokenExpires = undefined;
+  user.isPasswordChanged = true;
+  user.passwordUpdatedAt = Date.now();
+
+  await user.save()
+    res.status(200).json({
+      status: "sucess",
+      password : "password has updated"
+  })
+})
+
 export default {
   signup,
   signin,
   verifyEmail,
   forgotPassword,
+  resetpassword
 };
