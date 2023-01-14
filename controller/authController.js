@@ -50,6 +50,23 @@ const signin = catchAsync(async (req, res, next) => {
   });
 });
 
+const protect = catchAsync(async (req, res, next) => {
+  let token;
+  // Checking it token is provided in headers
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer"))
+    token = req.headers.authorization.split(' ')[1];
+  if (!token) return next(new AppError('User is not logged in. Please logged in to get access', 401))
+  // Decoding Token
+  console.log(token)
+  const { id, iat } = jwt.verify(token, process.env.PRIVATE_KEY);
+  // Checking if token belong to any user
+  const user = User.findById(id);
+  if (!user) return next(new AppError("The access token doesn't belong to any user. May be user has been deactivated"))
+  // Granting Access
+  req.user = user;
+  next();
+})
+
 const verifyEmail = catchAsync(async (req, res, next) => {
   //! Will get token from params object
   const { token } = req.params;
@@ -122,6 +139,7 @@ const resetpassword = catchAsync(async (req, res, next) => {
 export default {
   signup,
   signin,
+  protect,
   verifyEmail,
   forgotPassword,
   resetpassword

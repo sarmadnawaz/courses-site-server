@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import crypto from 'crypto'
 import bcrypt from "bcrypt";
 import validator from "validator";
+import { urlToHttpOptions } from "url";
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -80,18 +81,12 @@ const userSchema = new mongoose.Schema({
 // });
 
 // Hashing the password
-userSchema.pre("save", function (next) {
+userSchema.pre("save", async function (next) {
   const user = this;
   if (this.isNew || this.isPasswordChanged) {
     this.isPasswordChanged = undefined
-    bcrypt.hash(user.password, 10, (err, hash) => {
-      if (err) {
-        return next(err);
-      }
-      user.password = hash;
-    });
+    this.password = await bcrypt.hash(this.password, 12);
     this.confirmPassword = undefined;
-
   }
   next();
 });
