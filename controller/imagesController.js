@@ -7,7 +7,7 @@ export const getImage = async (req, res) => {
   // Generate a url
   const imageUrl = `${process.env.CDN_BASE_URL}/${
     type === "course-image" ? "courses" : "categories"
-  }/${size}/${name}.jpg`;
+  }/${size}/${name}.png`;
   const response = await axios.get(imageUrl, { responseType: "stream" });
   response.data.pipe(res);
 };
