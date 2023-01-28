@@ -9,15 +9,18 @@ export const getCourses = async (req, res) => {
     req.query
   )
     .sanitize()
+    .search()
+    .filter()
     .paginate();
-  const courses = await features.query;
-
-  const totalCourses = await features.totalDocQuery;
+  const [courses, totalCourses] = await Promise.all([
+    features.query,
+    features.totalDocQuery,
+  ]);
   res.status(200).json({
     status: "sucess",
+    totalDocs: totalCourses,
     data: {
-      totalCourses,
-      courses,
+      data: courses,
     },
   });
 };
