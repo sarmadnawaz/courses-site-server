@@ -13,7 +13,7 @@ const signup = catchAsync(async (req, res, next) => {
   const token = jwt.sign({ id: user._id }, process.env.PRIVATE_KEY);
   res.status(200).json({
     status: 'success',
-    message: "User has been logged In",
+    message: "user has been created succesfully. 🫡",
     token,
     data: {
       user
@@ -40,7 +40,10 @@ const signin = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     token,
-    message: "user has been signed in successfully",
+    message: "user has been logged in successfully. 👍",
+    data: {
+      data : user
+    }
   });
 });
 
