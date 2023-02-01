@@ -8,6 +8,7 @@ import AppError from "../utilz/appError.js";
 
 const signup = catchAsync(async (req, res, next) => {
   //! Creating user document in DB
+  req.body.role = 'user'
   req.body.isVerified = false;
   const user = await User.create(req.body);
   const token = jwt.sign({ id: user._id }, process.env.PRIVATE_KEY);
@@ -74,6 +75,13 @@ const protect = catchAsync(async (req, res, next) => {
   req.user = user;
   next();
 });
+
+const restrictTo = (...roles) => catchAsync(async (req, res, next) => {
+  if (!roles.includes(req.user.role)) {
+    return next(new AppError(`${req.user.role} is not authorized to access this route`))
+  }
+  next();
+})
 
 const verifyEmail = catchAsync(async (req, res, next) => {
   let user = req.user;
@@ -198,6 +206,7 @@ export default {
   signup,
   signin,
   protect,
+  restrictTo,
   emailVerification,
   verifyEmail,
   forgotPassword,

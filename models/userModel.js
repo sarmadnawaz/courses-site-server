@@ -66,6 +66,13 @@ const userSchema = new mongoose.Schema({
   },
   isPasswordChanged: {
     type: Boolean,
+  },
+  role: {
+    type: String,
+    required : 'true'
+  },
+  plan: {
+    type : "String"
   }
 });
 

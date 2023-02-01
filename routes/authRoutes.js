@@ -7,8 +7,8 @@ router
     .post('/signin', authController.signin)
     .post('/verifyemail', authController.protect, authController.verifyEmail)
     .patch('/emailverification/:token', authController.emailVerification)
-.post('/forgotpassword', authController.forgotPassword)
-.patch('/resetpassword/:token', authController.resetpassword)
-.get('/me', authController.getUser)
+    .post('/forgotpassword', authController.forgotPassword)
+    .patch('/resetpassword/:token', authController.resetpassword)
+    .get('/me', authController.getUser)
 
 export default router;

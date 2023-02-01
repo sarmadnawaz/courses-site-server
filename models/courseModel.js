@@ -16,19 +16,22 @@ const lectureSchema = new mongoose.Schema({
   storage_id : {
     type: String,
     required: true,
+    select : false
   },
   lecture_id: {
     type: String,
+    select : false
   },
   slug: {
     type: String,
-    required: [true, 'Each course must have slug']
+    required: [true, 'Each course must have slug'],
+    select : false
   },
   course : {
     type: mongoose.Schema.ObjectId,
     ref: 'CourseDetail',
     required : [true, 'lecture must belong to course']
-  }
+  },
 });
 
 const courseSchema = new mongoose.Schema({
@@ -40,6 +43,7 @@ const courseSchema = new mongoose.Schema({
     type: String,
     required: [true, "course must have slug field"],
     unique: [true, "each course slug must be unique"],
+    select: false,
   },
   source: {
     type: String,
@@ -64,9 +68,25 @@ const courseSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  course_id : {
+  course_id: {
     type: String,
+    select: false
+  },
+  status: {
+    type: String,
+    required : [true, 'Each course must have status']
   }
+},
+  {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
+);
+
+courseSchema.virtual('lectures', {
+  ref: 'Lecture',
+  foreignField: 'course',
+  localField: '_id'
 });
 
 export const Course =  mongoose.model("Course", courseSchema);

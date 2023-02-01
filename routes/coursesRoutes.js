@@ -1,4 +1,5 @@
 import express from "express";
+import authController from "../controller/authController.js";
 import {
   getCourses,
   getCourse,
@@ -8,12 +9,14 @@ import {
 } from "../controller/coursesController.js";
 const router = express.Router();
 
-router.get('/', getCourses);
-router.get('/:slug', getCourse);
+router.get("/", getCourses);
 
-// IT WILL BE PROTECTED IN FUTURE
+//*** PROTECTED AND RESTRICTED ***/
+router.use(authController.protect);
+router.get("/:slug", getCourse);
+router.use(authController.restrictTo("admin"));
 router.post("/", createCourses);
-router.delete('/', deleteCourses);
-router.delete('/lectures', deleteLectures);
+router.delete("/", deleteCourses);
+router.delete("/lectures", deleteLectures);
 
 export default router;
