@@ -31,8 +31,8 @@ const createCheckoutSession = catchAsync(async (req, res, next) => {
         quantity: 1,
       }
     ],
-    success_url: `http://localhost:3001/subscription/payment/success?plan=${subscription.name}&price=${subscription.price * 100}`,
-    cancel_url: `http://localhost:3001/subscription/payment/reject`,
+    success_url: `http://localhost:3001/subscription/${plan}/payment/succeed?price=${subscription.price * 100}`,
+    cancel_url: `http://localhost:3001/subscription/${plan}/payment/rejected`,
   });
   res.status(200).json({
     status: "success",

@@ -1,6 +1,8 @@
-import Course from "../models/courseModel.js";
+import fs from 'fs';
 import APIFeatures from "../utilz/apiFeatures.js";
 import catchAsync from "../utilz/catchAsync.js";
+import { Course , Lecture } from "../models/courseModel.js";
+
 
 export const getCourses = async (req, res) => {
   const features = new APIFeatures(
@@ -25,75 +27,46 @@ export const getCourses = async (req, res) => {
   });
 };
 
-export const getCourse = async (req, res) => {
-  try {
-    const { name: title } = req.params;
-    const course = await Course.find({ title });
-    res.status(200).json({
-      status: "sucess",
-      data: {
-        course,
-      },
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: "error",
-      message: err.message,
-    });
-  }
-};
-
-// GET COURSES BY CATEGORY BASE
-export const getCoursesByCategory = catchAsync(async (req, res, next) => {
-  req.query.category = req.params.category;
-  const features = new APIFeatures(
-    Course.find(),
-    Course.countDocuments(),
-    req.query
-  )
-    .sanitize()
-    .filter()
-    .paginate();
-  const [courses, totalCourses] = await Promise.all([
-    features.query,
-    features.totalDocQuery,
-  ]);
-
+export const getCourse = catchAsync(async (req, res, next) => {
+  const { slug } = req.params;
+  const course = await Course.findOne({ slug });
   res.status(200).json({
-    status: "success",
-    totalDocs: totalCourses,
+    status: "sucess",
     data: {
-      data: courses,
+      data : course,
     },
   });
 });
 
-// GET COURSES BY SEARCH
-export const getCoursesBySearch = catchAsync(async (req, res, next) => {
-  if (req.query.q) {
-    req.query.search = req.query.q;
-  } else req.query.search = undefined;
-  console.log(req.query);
-  const features = new APIFeatures(
-    Course.find(),
-    Course.countDocuments(),
-    req.query
-  )
-    .sanitize()
-    .search()
-    .filter()
-    .paginate();
-  const [courses, totalCourses] = await Promise.all([
-    features.query,
-    features.totalDocQuery,
-  ]);
+// let courses = fs.readFileSync('./assests/course.json', 'utf-8')
+// courses = JSON.parse(courses);
 
+export const createCourses = catchAsync(async (req, res, next) => {
+  for (let i = 0; i < req.body.length; i++){
+    let course = req.body[i];
+    let lectures = course.lectures;
+    const courseDoc = await Course.create(course);
+    lectures = lectures.map(lecture => ({ ...lecture, course : courseDoc._id }))
+    const lecturesDoc = await Lecture.create(lectures);
+  }
   res.status(200).json({
     status: "success",
-    totalDocs: totalCourses,
-    data: {
-      data: courses,
-    },
+  });
+});
+
+
+
+export const deleteLectures = catchAsync(async (req, res, next) => {
+  await Lecture.deleteMany();
+  res.status(200).json({
+    status: "success"
+  });
+});
+
+export const deleteCourses = catchAsync(async (req, res, next) => {
+  await Course.deleteMany();
+  res.status(200).json({
+    status: "success"
   });
 });
 
