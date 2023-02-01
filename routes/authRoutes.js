@@ -3,10 +3,12 @@ import authController from "../controller/authController.js"
 const router = express.Router();
 
 router
-.post('/signup', authController.signup)
-.post('/signin', authController.signin)
+    .post('/signup', authController.signup)
+    .post('/signin', authController.signin)
+    .post('/verifyemail', authController.protect, authController.verifyEmail)
+    .patch('/emailverification/:token', authController.emailVerification)
 .post('/forgotpassword', authController.forgotPassword)
-.post('/resetpassword/:token', authController.resetpassword)
-.get('/emailverification/:token', authController.verifyEmail)
+.patch('/resetpassword/:token', authController.resetpassword)
+.get('/me', authController.getUser)
 
 export default router;

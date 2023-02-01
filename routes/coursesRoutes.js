@@ -1,9 +1,15 @@
 import express from "express";
-import authController from "../controller/authController.js";
-import { getCourse, getCourses } from "../controller/coursesController.js";
+import {
+  getCourses,
+  getCoursesBySearch,
+  getCoursesByCategory,
+  getCoursesByTopic,
+} from "../controller/coursesController.js";
 const router = express.Router();
 
-router.route("/").get(authController.protect, getCourses);
-router.route("/:name").get(getCourse);
+router.route("/").get(getCourses);
+router.get("/search", getCoursesBySearch);
+router.get("/topic/:topic", getCoursesByTopic);
+router.get("/category/:category", getCoursesByCategory);
 
 export default router;

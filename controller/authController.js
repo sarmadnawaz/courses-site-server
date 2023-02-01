@@ -10,21 +10,15 @@ const signup = catchAsync(async (req, res, next) => {
   //! Creating user document in DB
   req.body.isVerified = false;
   const user = await User.create(req.body);
-  //! Email Verification
-  const verificationToken = user.createEmailVerificationToken();
-  await sendEmailVerfication({
-    email: user.email,
-    token: verificationToken,
-    protocol: req.protocol,
-    host: req.get("host"),
-  });
-  //! Saving document
-  await user.save({ validateBeforeSave: false });
-  //! Success message
+  const token = jwt.sign({ id: user._id }, process.env.PRIVATE_KEY);
   res.status(200).json({
-    status: "success",
-    message: "Email verification link has been sent at user email address",
-  });
+    status: 'success',
+    message: "User has been logged In",
+    token,
+    data: {
+      user
+    }
+  })
 });
 
 const signin = catchAsync(async (req, res, next) => {
@@ -50,27 +44,60 @@ const signin = catchAsync(async (req, res, next) => {
   });
 });
 
+//* MIDDLEWARE *\\
 const protect = catchAsync(async (req, res, next) => {
   let token;
   // Checking it token is provided in headers
-  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer"))
-    token = req.headers.authorization.split(' ')[1];
-  if (!token) return next(new AppError('User is not logged in. Please logged in to get access', 401))
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  )
+    token = req.headers.authorization.split(" ")[1];
+  if (!token)
+    return next(
+      new AppError("User is not logged in. Please logged in to get access", 401)
+    );
   // Decoding Token
-  console.log(token)
   const { id, iat } = jwt.verify(token, process.env.PRIVATE_KEY);
   // Checking if token belong to any user
-  const user = User.findById(id);
-  if (!user) return next(new AppError("The access token doesn't belong to any user. May be user has been deactivated"))
+  const user = await User.findById(id);
+  if (!user)
+    return next(
+      new AppError(
+        "The access token doesn't belong to any user. May be user has been deactivated"
+      )
+    );
   // Granting Access
   req.user = user;
   next();
-})
+});
 
 const verifyEmail = catchAsync(async (req, res, next) => {
-  //! Will get token from params object
+  let user = req.user;
+
+  //! SENDING Email Verification
+  const verificationToken = user.createEmailVerificationToken();
+  await sendEmailVerfication({
+      email: user.email,
+      token: verificationToken,
+      protocol: req.protocol,
+      host: req.get("host"),
+  });
+
+  //! Saving document
+  await user.save({ validateBeforeSave: false });
+  
+  //! Success message
+  res.status(200).json({
+      status: "success",
+      message: "Email verification link has been sent at user email address",
+      data : {}
+    });
+})
+
+const emailVerification = catchAsync(async (req, res, next) => {
   const { token } = req.params;
-  if (!token) return next(new AppError("invalid link 🫡", 404));
+  if (!token) return next(new AppError("Invalid link 🫡", 404));
   //! Hashing the token
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
   //! Finding User based on hashed token
@@ -79,6 +106,7 @@ const verifyEmail = catchAsync(async (req, res, next) => {
     emailVerificationTokenExpires: { $gt: Date.now() },
   });
   if (!user) return next(new AppError("Token has been expired", 403));
+
   //! Change verify field of user document to true and then save
   user.isVerified = true;
   user.emailVerificationToken = undefined;
@@ -89,13 +117,13 @@ const verifyEmail = catchAsync(async (req, res, next) => {
     status: "success",
     message: "Email has been verified",
     data: {
-      user,
+      user
     },
   });
 });
 
 const forgotPassword = catchAsync(async (req, res, next) => {
-  const { email } = req.body;
+  const { email } = req.body || req.user;
   if (!email) next(new AppError("Please provide us your email"));
   const user = await User.findOne({ email });
   if (!user) next(new AppError("User Not Found"));
@@ -114,12 +142,16 @@ const forgotPassword = catchAsync(async (req, res, next) => {
 });
 
 const resetpassword = catchAsync(async (req, res, next) => {
-  const hashedToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
   const user = await User.findOne({
     resetPasswordToken: hashedToken,
-    resetPasswordTokenExpires: { $gt: Date.now() }
-  })
-  if (!user) return next(new AppError('Invalid token or token is expired', 400))
+    resetPasswordTokenExpires: { $gt: Date.now() },
+  });
+  if (!user)
+    return next(new AppError("Invalid token or token is expired", 400));
   const { password, confirmPassword } = req.body;
   user.password = password;
   user.confirmPassword = confirmPassword;
@@ -129,18 +161,43 @@ const resetpassword = catchAsync(async (req, res, next) => {
   user.isPasswordChanged = true;
   user.passwordUpdatedAt = Date.now();
 
-  await user.save()
-    res.status(200).json({
-      status: "sucess",
-      password : "password has updated"
-  })
-})
+  await user.save();
+  res.status(200).json({
+    status: "sucess",
+    password: "password has updated",
+  });
+});
+
+const getUser = catchAsync(async (req, res, next) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  )
+  token = req.headers.authorization.split(" ")[1];
+  if (!token)
+    return next(
+      new AppError("User is not logged in. Please logged in to get access", 401)
+    );
+  const { id } = jwt.verify(token, process.env.PRIVATE_KEY);
+  const user = await User.findById(id);
+  if (!user)
+    return next(new AppError("The access token has been expired", 401));
+  res.status(200).json({
+    status: "success",
+    data: {
+      user,
+    },
+  });
+});
 
 export default {
   signup,
   signin,
   protect,
+  emailVerification,
   verifyEmail,
   forgotPassword,
-  resetpassword
+  resetpassword,
+  getUser,
 };
