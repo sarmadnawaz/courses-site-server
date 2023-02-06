@@ -10,6 +10,7 @@ const signup = catchAsync(async (req, res, next) => {
   //! Creating user document in DB
   req.body.role = 'user'
   req.body.isVerified = false;
+  req.body.plan = 'free';
   const user = await User.create(req.body);
   const token = jwt.sign({ id: user._id }, process.env.PRIVATE_KEY);
   res.status(200).json({

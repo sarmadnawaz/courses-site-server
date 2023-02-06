@@ -70,6 +70,7 @@ const courseSchema = new mongoose.Schema({
   },
   course_id: {
     type: String,
+    required : [true, "Each course must have unique code"],
     select: false
   },
   status: {

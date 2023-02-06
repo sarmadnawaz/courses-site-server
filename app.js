@@ -7,9 +7,14 @@ import videosRouter from "./routes/videosRoute.js";
 import authRouter from "./routes/authRoutes.js";
 import errorController from "./controller/errorController.js";
 import subscriptionRouter from "./routes/subscriptionRoutes.js";
+import { loginConfig } from "./utilz/config.js";
 const app = express();
-app.use(cors());
 
+//* GLOBAL VARIABLES *//
+app.set("cookie_for_auth", ["locale=en", ""]);
+app.set("config_for_login", loginConfig);
+
+app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRouter);

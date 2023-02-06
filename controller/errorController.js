@@ -23,6 +23,6 @@ export default (err, req, res, next) => {
   if (process.env.NODE_ENV === "development") {
     sendDevError(err, res);
   } else {
-    sendProdError(err, res);
+    sendDevError(err, res);
   }
 };

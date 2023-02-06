@@ -1,9 +1,10 @@
-import fs from 'fs';
+import fs from "fs";
 import APIFeatures from "../utilz/apiFeatures.js";
 import catchAsync from "../utilz/catchAsync.js";
-import AppError from '../utilz/appError.js';
-import { Course , Lecture } from "../models/courseModel.js";
-
+import AppError from "../utilz/appError.js";
+import { Course, Lecture } from "../models/courseModel.js";
+import { fetchLectures } from "../utilz/fetch.js";
+import { checkLecturesPermission } from '../utilz/utilityFunctions.js';
 
 export const getCourses = async (req, res) => {
   const features = new APIFeatures(
@@ -28,46 +29,45 @@ export const getCourses = async (req, res) => {
   });
 };
 
+
 export const getCourse = catchAsync(async (req, res, next) => {
-  const { slug } = req.params;
-  let selectOptions = [];
-  let lectures = [];
-  
-  const course = await Course.findOne({ slug });
-  if (!course) return next(new AppError('Document Not Found', 404))
-  if (course.status === 'premium' && (req.user.plan === 'premium')) {
-    selectOptions.push('+storage_id', '+slug');    
-  } else if (course.status === 'standard' && (req.user.plan === 'premium' || req.user.plan === 'standard')) {
-    selectOptions.push('+storage_id', '+slug')
-  } else if (course.status === 'free') {
-    selectOptions.push('+storage_id', '+slug');
-  } else {
-    return next(new AppError(`This course is only for ${course.status} plan subscribers. Thank you 🫡`, 401))
+  const { slug } = req.params
+  const course = await Course.findOne({ slug }).select("+course_id");
+  if (!course) {
+    return next(new AppError("Document Not found", 404));
   }
+  let url = `https://${process.env.COURSES_SITE}/api/v1/course/${
+    course.course_id || "3505"
+    }/lessons`;
+  
+  let lectures = await fetchLectures({ url, req })
 
-  if (selectOptions.length > 0) {
-    lectures = await Lecture.find({ course: course._id }).select(selectOptions.join(' '))
-  } else lectures = await Lecture.find({ course: course._id });
-
+  lectures = checkLecturesPermission({ lectures, userPlan : req.user?.plan, courseStatus : course.status})
+  
   res.status(200).json({
-    status: "sucess",
+    status: 'success',
     data: {
+      course: {
         course,
         lectures
-    },
-  });
-});
+      }
+    }
+  })
+})
 
 // let courses = fs.readFileSync('./assests/course.json', 'utf-8')
 // courses = JSON.parse(courses);
 
 export const createCourses = catchAsync(async (req, res, next) => {
   // req.body = courses;
-  for (let i = 0; i < req.body.length; i++){
+  for (let i = 0; i < req.body.length; i++) {
     let course = req.body[i];
     let lectures = course.lectures;
     const courseDoc = await Course.create(course);
-    lectures = lectures.map(lecture => ({ ...lecture, course : courseDoc._id }))
+    lectures = lectures.map((lecture) => ({
+      ...lecture,
+      course: courseDoc._id,
+    }));
     const lecturesDoc = await Lecture.create(lectures);
   }
   res.status(200).json({
@@ -76,19 +76,10 @@ export const createCourses = catchAsync(async (req, res, next) => {
 });
 
 
-
-export const deleteLectures = catchAsync(async (req, res, next) => {
-  await Lecture.deleteMany();
-  res.status(200).json({
-    status: "success"
-  });
-});
-
 export const deleteCourses = catchAsync(async (req, res, next) => {
   await Course.deleteMany();
   res.status(200).json({
-    status: "success"
+    status: "success",
   });
 });
 
-export const getCoursesByTopic = catchAsync(async (req, res, next) => {});
